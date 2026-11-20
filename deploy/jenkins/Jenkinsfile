@@ -17,8 +17,9 @@ pipeline {
         COMPOSE_DIR = "${WORKSPACE}/deploy"
         IMAGE_TAG = "yuxm-web:${BUILD_NUMBER}"
         API_IMAGE_TAG = "yuxm-api:${BUILD_NUMBER}"
-        // 回滚点状态文件所在目录（宿主机上部署目录；路径不同请同步改 rollback.sh）
-        ROLLBACK_STATE_DIR = "/opt/yuxm-site/deploy"
+        // 回滚点状态文件所在目录（Jenkins 容器内挂载的宿主机部署目录；compose 里
+        // - /opt/yuxm-site/deploy:/host-deploy，路径不同请同步改 compose 与 rollback.sh）
+        ROLLBACK_STATE_DIR = "/host-deploy"
     }
 
     stages {
@@ -61,6 +62,9 @@ pipeline {
 
         stage('部署') {
             steps {
+                // .env 含密钥不入库（gitignore），从宿主机部署目录挂载点复制到工作区
+                sh 'test -f ${ROLLBACK_STATE_DIR}/.env || (echo "缺少 /host-deploy/.env，请先完成首次手动部署" && exit 1)'
+                sh 'cp ${ROLLBACK_STATE_DIR}/.env ${COMPOSE_DIR}/.env'
                 // 镜像已在上一阶段构建并打好 latest 标签，这里只做容器替换
                 // --no-build：保证部署的一定是刚构建/回滚时 retag 的镜像，不被意外重建
                 dir('deploy') {

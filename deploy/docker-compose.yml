@@ -115,6 +115,7 @@ services:
     volumes:
       - jenkins_data:/var/jenkins_home                    # 任务/插件/凭据持久化
       - /var/run/docker.sock:/var/run/docker.sock         # 流水线构建镜像必需
+      - /opt/yuxm-site/deploy:/host-deploy                # 宿主机部署目录：流水线读取 .env、写回滚点状态文件
     user: root                                            # 容器内需 root 才能使用 docker.sock（生产可改 group_add）
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/login || exit 1"]
