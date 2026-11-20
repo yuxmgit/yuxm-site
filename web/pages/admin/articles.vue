@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 // 文章管理：内容目录文章列表 + 后台覆盖信息（发布状态/精选/置顶/摘要）
 import { Search, Star, Pin } from 'lucide-vue-next'
 

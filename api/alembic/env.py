@@ -1,4 +1,4 @@
-﻿"""Alembic 迁移环境：连接串来自 app.core.config（.env）。"""
+"""Alembic 迁移环境：连接串来自 app.core.config（.env）。"""
 import asyncio
 from logging.config import fileConfig
 

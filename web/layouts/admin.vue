@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 // 管理端布局：侧边栏 + 顶栏（TDesign 风格的简洁中后台）
 import { ArrowLeft, FileText, LayoutDashboard, Settings, Users } from 'lucide-vue-next'
 

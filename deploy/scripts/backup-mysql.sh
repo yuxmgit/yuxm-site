@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # MySQL 每日备份：docker compose 环境下导出 SQL 并保留最近 7 天
 # crontab 示例（每日 3:30）：
 #   30 3 * * * /opt/yuxm-site/deploy/scripts/backup-mysql.sh >> /var/log/yuxm-backup.log 2>&1

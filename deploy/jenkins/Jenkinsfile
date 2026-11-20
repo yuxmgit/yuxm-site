@@ -1,4 +1,4 @@
-﻿// yuxm-site 生产流水线：拉码 → 前端测试/构建 → 构建镜像 → 部署 → 健康检查
+// yuxm-site 生产流水线：拉码 → 前端测试/构建 → 构建镜像 → 部署 → 健康检查
 // Jenkins 需装插件：Pipeline、Docker Pipeline、Git
 // 凭据：repo-credentials（GitHub 拉码账号，仓库 https://github.com/yuxmgit/yuxm-site）与服务器本机 Docker 即可，无需额外云凭据
 pipeline {

@@ -1,4 +1,4 @@
-﻿"""阅读数统计：POST 上报 + GET 查询（Redis 缓存 + MySQL 落库）。"""
+"""阅读数统计：POST 上报 + GET 查询（Redis 缓存 + MySQL 落库）。"""
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession

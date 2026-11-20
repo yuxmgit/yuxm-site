@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 // 站点设置：站点名称/SEO/Hero 简介/公告/备案号/开源链接（保存后前台立即生效）
 import { KeyRound, Save } from 'lucide-vue-next'
 

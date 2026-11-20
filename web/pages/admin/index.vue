@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 // 管理端仪表盘：访问量、用户数、阅读 Top 文章 + 修改密码入口
 import { BarChart, BookOpen, Eye, Users } from 'lucide-vue-next'
 

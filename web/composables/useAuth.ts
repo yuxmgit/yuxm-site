@@ -1,4 +1,4 @@
-﻿/** 认证状态管理：token 存储、登录态、401 拦截刷新、登出与退出所有设备。 */
+/** 认证状态管理：token 存储、登录态、401 拦截刷新、登出与退出所有设备。 */
 export interface UserInfo {
   id: number
   nickname: string

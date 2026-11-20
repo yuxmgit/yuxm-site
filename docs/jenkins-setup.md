@@ -1,4 +1,4 @@
-﻿# Jenkins 从零部署到云服务器详细配置指南
+# Jenkins 从零部署到云服务器详细配置指南
 
 > 与业务服务同机部署（`deploy/docker-compose.yml` 里的 `jenkins` 服务）。
 > 全程约 30 分钟。完成后效果：git push → Jenkins 自动构建前端/后端 → 镜像部署 → 健康检查 → 失败告警。

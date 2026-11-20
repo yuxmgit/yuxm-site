@@ -1,4 +1,4 @@
-﻿---
+---
 title: "第 11 章（实战）：JWT + Redis 黑名单 —— 从『登出无效』到『实时踢下线』"
 description: "以本站（FastAPI + Redis）生产代码为素材，从入门到精通讲透 JWT 吊销难题：jti 黑名单、版本号踢下线、双 token 旋转、Lua 原子限流防爆破，附完整代码与高并发分析。"
 category: jwt

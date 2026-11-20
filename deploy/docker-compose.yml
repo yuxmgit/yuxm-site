@@ -1,4 +1,4 @@
-﻿# yuxm-site 生产编排：nginx / web / api / mysql / redis
+# yuxm-site 生产编排：nginx / web / api / mysql / redis
 # 用法：cd deploy && docker compose up -d
 # 首次启动后在 api 容器内执行 python -m app.seed 创建管理员
 name: yuxm-site

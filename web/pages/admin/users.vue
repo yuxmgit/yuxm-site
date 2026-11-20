@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 // 用户管理：列表、踢下线、封禁/解封（危险操作二次确认）
 import { ShieldBan, ShieldCheck, LogOut } from 'lucide-vue-next'
 

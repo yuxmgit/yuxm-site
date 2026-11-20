@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 // 管理端登录：账号密码（初始 yuxiangming / yuxiangming，上线后必须修改）
 import { Lock, User } from 'lucide-vue-next'
 

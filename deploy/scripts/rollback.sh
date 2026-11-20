@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # 一键回滚脚本：把线上 web/api 容器回退到指定的历史构建版本
 #
 # 用法：

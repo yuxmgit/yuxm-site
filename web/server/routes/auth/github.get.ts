@@ -1,4 +1,4 @@
-﻿// OAuth 回调中转（Nitro 服务端路由）：
+// OAuth 回调中转（Nitro 服务端路由）：
 // 第三方重定向到这里 → 服务端拿 code/state 调 FastAPI 换 token → 302 回首页并携带登录数据
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

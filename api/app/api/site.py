@@ -1,4 +1,4 @@
-﻿"""公开的站点设置接口：前台 SSR 读取（Redis 缓存，后台修改时刷新缓存）。"""
+"""公开的站点设置接口：前台 SSR 读取（Redis 缓存，后台修改时刷新缓存）。"""
 import json
 
 from fastapi import APIRouter, Depends

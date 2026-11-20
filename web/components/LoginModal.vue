@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 // 登录弹窗：手机验证码 / GitHub / Gitee 三种方式 Tab 切换
 import { X } from 'lucide-vue-next'
 

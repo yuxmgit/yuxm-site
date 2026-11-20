@@ -1,4 +1,4 @@
-﻿// Gitee OAuth 回调中转（与 github.get.ts 流程一致）
+// Gitee OAuth 回调中转（与 github.get.ts 流程一致）
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const code = String(query.code || '')

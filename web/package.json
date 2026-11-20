@@ -31,6 +31,11 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
-    "vue-demi@0.14.10": true
+    "vue-demi@0.14.10": true,
+    "better-sqlite3@13.2.0": true
+  },
+  "overrides": {
+    "readdir-glob": "4.0.0",
+    "zod": "4.6.7"
   }
 }

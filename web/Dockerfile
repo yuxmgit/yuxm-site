@@ -1,4 +1,4 @@
-﻿# 构建 Nuxt 前端镜像：构建期注入 API 地址（容器间通信），运行 node server
+# 构建 Nuxt 前端镜像：构建期注入 API 地址（容器间通信），运行 node server
 # 说明：用 node:22-slim（Debian glibc）而非 alpine——better-sqlite3（@nuxt/content 依赖）
 # 是原生模块，glibc 平台有官方预编译二进制，配合 npmmirror 二进制镜像直接下载，
 # 免去 apk 安装 gcc/make + 源码编译（2C 机器上可省 30+ 分钟构建时间）

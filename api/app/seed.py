@@ -1,4 +1,4 @@
-﻿"""初始化种子数据：创建管理员账号（yuxiangming / yuxiangming）与默认站点设置。
+"""初始化种子数据：创建管理员账号（yuxiangming / yuxiangming）与默认站点设置。
 
 用法：python -m app.seed
 生产上线后请立即在后台修改密码。
