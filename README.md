@@ -1,6 +1,7 @@
 # yuxm-site
 
 面向开发者求职展示的个人技术教程网站，域名 `yuxm.site`（部署于腾讯云）。
+代码仓库：[https://github.com/yuxmgit/yuxm-site](https://github.com/yuxmgit/yuxm-site)
 网站本身的技术栈（Nuxt3 + FastAPI + Docker + Jenkins + JWT/OAuth2 + Redis 黑名单踢下线）就是架构实践作品的一部分，教程内容与实现代码互相印证。
 
 ## 技术栈
@@ -71,13 +72,13 @@ uvicorn app.main:app --reload --port 8000    # http://localhost:8000/api/docs
 
 迁移规范见 `docs/content-migration.md`。
 
-## Git 仓库初始化（本机未装 Git 时）
+## 代码仓库
+
+代码已托管至 GitHub：`https://github.com/yuxmgit/yuxm-site`
 
 ```bash
-# 安装 Git for Windows 后执行
 cd yuxm-site
-git init
-git add .
-git commit -m "init: yuxm-site scaffold"
-# 推送到 GitHub / Gitee 远程后供 Jenkins 拉取
+git remote add origin https://github.com/yuxmgit/yuxm-site.git
+git push -u origin main
+# 供 Jenkins 拉取；如需 Gitee 双平台可另行添加第二个 remote
 ```

@@ -50,7 +50,7 @@
 2. SSH 加固：密钥登录验证通过后，禁密码登录、禁 root 直登（可改端口）
 3. 安全组只放行：22/2222（SSH）、80/443、8080（Jenkins，仅自己 IP /32）；**3306/6379/8000/3000 一律不放行**
 4. fail2ban 防 SSH 爆破
-5. 目录规划：`/opt/yuxm-site`，拉取代码
+5. 目录规划：`/opt/yuxm-site`，拉取代码 `git clone https://github.com/yuxmgit/yuxm-site.git .`
 6. 环境变量：`cp .env.example .env`，必改 `JWT_SECRET`（≥32 字节随机）、`MYSQL_ROOT_PASSWORD`、`MYSQL_PASSWORD`、`REDIS_PASSWORD`
 
 ## 阶段 2：首次部署
@@ -87,8 +87,8 @@ curl http://127.0.0.1/api/health       # {"code":0,...} 即正常
 按 `docs/jenkins-setup.md` 全程约 30 分钟：
 
 1. `cd deploy && docker compose up -d jenkins`（已随 compose 编排，docker.sock 挂载 + 国内插件源）
-2. 解锁 → 装推荐插件 → 补装 Gitee/GitHub 插件 → 配置拉码凭据（`gitee-credentials`）
-3. 新建 Pipeline 任务，SCM 指向仓库，脚本路径 `deploy/jenkins/Jenkinsfile`
+2. 解锁 → 装推荐插件 → 补装 GitHub（或 Gitee）插件 → 配置拉码凭据（`repo-credentials`，GitHub 私人令牌）
+3. 新建 Pipeline 任务，SCM 指向 `https://github.com/yuxmgit/yuxm-site`，脚本路径 `deploy/jenkins/Jenkinsfile`
 4. （可选）配置 webhook 实现 git push 自动触发
 
 流水线阶段（`deploy/jenkins/Jenkinsfile`）：

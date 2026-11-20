@@ -68,9 +68,9 @@ docker compose restart jenkins
 **系统管理 → Credentials → System → Global credentials → Add Credentials**：
 
 - Kind：`Username with password`
-- ID：`gitee-credentials`（与 Jenkinsfile `checkout scm` 的默认凭据约定一致）
-- Username：Gitee/GitHub 用户名
-- Password：填 **私人令牌**（Gitee：设置→私人令牌，勾选 `projects`；GitHub：Settings→Developer settings→Personal access tokens，勾选 `repo`），不要填网页登录密码——令牌可随时吊销
+- ID：`repo-credentials`（GitHub 仓库用；如配置了 Gitee 镜像仓库则为 `gitee-credentials`，需与 Jenkinsfile 中凭据约定一致）
+- Username：GitHub 用户名（`yuxmgit`）
+- Password：填 **私人令牌**（GitHub：Settings → Developer settings → Personal access tokens，勾选 `repo`；Gitee：设置→私人令牌，勾选 `projects`），不要填网页登录密码——令牌可随时吊销
 
 ## 4. 创建流水线任务
 
@@ -79,8 +79,8 @@ docker compose restart jenkins
    - Gitee：`http://服务器IP:8080/gitee-hook/`（装了 Gitee 插件后自动生成，含随机 token）
    - GitHub：`http://服务器IP:8080/github-webhook/`
 3. **Pipeline 定义**：选 **Pipeline script from SCM**：
-   - SCM：Git → 仓库地址 `https://gitee.com/yuxiangming/yuxm-site.git`
-   - Credentials：选 `gitee-credentials`
+   - SCM：Git → 仓库地址 `https://github.com/yuxmgit/yuxm-site.git`
+   - Credentials：选 `repo-credentials`（Gitee 双平台备选时可用 `gitee-credentials`）
    - 指定分支：`*/main`
    - Script Path：`deploy/jenkins/Jenkinsfile`（流水线定义随代码入库，改流水线也是 git commit）
 4. 保存 → 点 **立即构建（Build Now）** 手动跑一次验证

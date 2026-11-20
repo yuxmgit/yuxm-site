@@ -1,13 +1,22 @@
 ﻿# 服务器初始化与安全加固清单（腾讯云）
 
-> 适用：CentOS 7+/Ubuntu 22.04，2C4G 起步。执行顺序自上而下。
+> 适用：Ubuntu 22.04+（当前服务器 **Ubuntu 26.04.1 LTS**，腾讯云 CVM），2C4G 起步。执行顺序自上而下。
+
+## 0. 当前服务器信息
+
+| 项 | 值 |
+|---|---|
+| 主机名 | VM-0-11-ubuntu |
+| 操作系统 | Ubuntu 26.04.1 LTS |
+| 内核 | Linux 7.0.0-30-generic |
+| 架构 | x86-64 |
+| 云厂商/机型 | 腾讯云 CVM（kvm 虚拟化，3.0 机型） |
 
 ## 1. 基础初始化
 
 ```bash
 # 系统更新
-sudo yum update -y          # CentOS
-# sudo apt update && sudo apt upgrade -y   # Ubuntu
+sudo apt update && sudo apt upgrade -y
 
 # 时区
 sudo timedatectl set-timezone Asia/Shanghai
@@ -24,7 +33,7 @@ EOF
 sudo systemctl restart docker
 
 # 安装 docker compose 插件（新版 docker 自带；无则装）
-sudo yum install -y docker-compose-plugin   # 或 apt install docker-compose-plugin
+sudo apt install -y docker-compose-plugin
 ```
 
 ## 2. SSH 加固（最优先）
@@ -59,7 +68,7 @@ sudo ufw enable
 ## 4. fail2ban 防 SSH 爆破
 
 ```bash
-sudo yum install -y fail2ban   # Ubuntu: apt install fail2ban
+sudo apt install -y fail2ban
 sudo tee /etc/fail2ban/jail.local <<'EOF'
 [sshd]
 enabled = true
@@ -75,7 +84,8 @@ sudo systemctl enable --now fail2ban
 ```bash
 # 目录规划
 sudo mkdir -p /opt/yuxm-site && cd /opt/yuxm-site
-# 拉取代码（git clone 或 Jenkins 自动部署后忽略此步）
+# 拉取代码（GitHub 仓库；或 Jenkins 自动部署后忽略此步）
+sudo git clone https://github.com/yuxmgit/yuxm-site.git .
 
 # 环境变量（复制模板并填写强随机值；注意放在 deploy/ 目录下）
 cp .env.example deploy/.env
