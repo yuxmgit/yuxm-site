@@ -6,7 +6,8 @@ export default defineContentConfig({
   collections: {
     content: defineCollection({
       type: 'page',
-      source: 'content/**',
+      // include 相对于 web/content 目录解析（非项目根）
+      source: '**',
       schema: z.object({
         title: z.string(),
         description: z.string().optional(),
