@@ -1,0 +1,103 @@
+﻿# 教程演示环境（与生产完全隔离，仅用于写教程时演示）：
+#   1. Redis Cluster 3主3从（端口 7001-7006，announce 到 127.0.0.1）
+#   2. MySQL 主从复制（master 3307 / replica 3308，自动初始化复制）
+# 用法：
+#   启动集群节点：    docker compose -f docker-compose.demo.yml up -d
+#   初始化 Redis 集群（仅首次）：docker compose -f docker-compose.demo.yml --profile init up redis-cluster-init
+#   启动 MySQL 主从： docker compose -f docker-compose.demo.yml --profile mysql up -d
+#   查看复制状态：    docker exec mysql-replica mysql -uroot -proot -e "SHOW REPLICA STATUS\G"
+name: yuxm-demo
+
+x-redis-conf: &redis-conf
+  image: redis:7
+  restart: unless-stopped
+  # 按节点端口动态生成配置：announce 到 127.0.0.1，保证宿主机 redis-cli 可直连集群
+  command:
+    - sh
+    - -c
+    - |
+      printf 'port %s\ncluster-enabled yes\ncluster-config-file nodes.conf\ncluster-node-timeout 5000\nappendonly yes\ncluster-announce-ip 127.0.0.1\ncluster-announce-port %s\ncluster-announce-bus-port %s\n' "$$REDIS_PORT" "$$REDIS_PORT" "$$((REDIS_PORT + 10000))" > /tmp/redis.conf && exec redis-server /tmp/redis.conf
+
+services:
+  redis-node1:
+    <<: *redis-conf
+    ports: ["7001:7001"]
+    environment: { REDIS_PORT: 7001 }
+  redis-node2:
+    <<: *redis-conf
+    ports: ["7002:7002"]
+    environment: { REDIS_PORT: 7002 }
+  redis-node3:
+    <<: *redis-conf
+    ports: ["7003:7003"]
+    environment: { REDIS_PORT: 7003 }
+  redis-node4:
+    <<: *redis-conf
+    ports: ["7004:7004"]
+    environment: { REDIS_PORT: 7004 }
+  redis-node5:
+    <<: *redis-conf
+    ports: ["7005:7005"]
+    environment: { REDIS_PORT: 7005 }
+  redis-node6:
+    <<: *redis-conf
+    ports: ["7006:7006"]
+    environment: { REDIS_PORT: 7006 }
+
+  # 一次性建集群：3 主（7001-7003）+ 3 从（7004-7006）
+  redis-cluster-init:
+    image: redis:7
+    profiles: ["init"]
+    network_mode: host
+    depends_on:
+      - redis-node1
+    entrypoint: >
+      sh -c "
+        sleep 3 &&
+        echo yes | redis-cli --cluster create
+        127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003
+        127.0.0.1:7004 127.0.0.1:7005 127.0.0.1:7006
+        --cluster-replicas 1 &&
+        redis-cli -p 7001 cluster info | head -n 5
+      "
+
+  # ---------------- MySQL 主从（profile: mysql） ----------------
+
+  mysql-master:
+    image: mysql:8.0
+    profiles: ["mysql"]
+    restart: unless-stopped
+    ports: ["3307:3306"]
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: demo
+    volumes:
+      - mysql_master_data:/var/lib/mysql
+      - ./demo/mysql/master.cnf:/etc/mysql/conf.d/master.cnf:ro
+      - ./demo/mysql/master/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mysql-replica:
+    image: mysql:8.0
+    profiles: ["mysql"]
+    restart: unless-stopped
+    ports: ["3308:3306"]
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: demo
+    volumes:
+      - mysql_replica_data:/var/lib/mysql
+      - ./demo/mysql/replica.cnf:/etc/mysql/conf.d/replica.cnf:ro
+      - ./demo/mysql/replica/init:/docker-entrypoint-initdb.d:ro
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+
+volumes:
+  mysql_master_data:
+  mysql_replica_data:

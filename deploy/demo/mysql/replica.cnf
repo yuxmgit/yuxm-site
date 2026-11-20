@@ -1,0 +1,7 @@
+﻿# MySQL 从库配置（演示主从复制）
+[mysqld]
+server-id = 2
+relay-log = relay-bin
+read_only = 1
+super_read_only = 1
+character-set-server = utf8mb4

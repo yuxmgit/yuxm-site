@@ -1,0 +1,117 @@
+﻿// yuxm-site 生产流水线：拉码 → 前端测试/构建 → 构建镜像 → 部署 → 健康检查
+// Jenkins 需装插件：Pipeline、Docker Pipeline、Git
+// 凭据：gitee-credentials（Git 拉码账号）与服务器本机 Docker 即可，无需额外云凭据
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timeout(time: 30, unit: 'MINUTES')
+    }
+
+    environment {
+        // Jenkins 工作区内项目根目录（Jenkinsfile 位于 deploy/jenkins/）
+        PROJECT_DIR = "${WORKSPACE}"
+        COMPOSE_DIR = "${WORKSPACE}/deploy"
+        IMAGE_TAG = "yuxm-web:${BUILD_NUMBER}"
+        API_IMAGE_TAG = "yuxm-api:${BUILD_NUMBER}"
+        // 回滚点状态文件所在目录（宿主机上部署目录；路径不同请同步改 rollback.sh）
+        ROLLBACK_STATE_DIR = "/opt/yuxm-site/deploy"
+    }
+
+    stages {
+        stage('检出代码') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('前端质量检查与构建') {
+            steps {
+                dir('web') {
+                    sh 'npm install --registry=https://registry.npmmirror.com'
+                    // 预留：npm run lint && npm run test（脚手架后续补充 lint/test 脚本）
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('后端语法检查') {
+            steps {
+                sh '''
+                  docker run --rm -v "$PWD/api":/app -w /app python:3.12-slim \
+                    python -m compileall -q app alembic/env.py
+                '''
+            }
+        }
+
+        stage('构建镜像') {
+            steps {
+                // 双标签：BUILD_NUMBER 用于版本化回滚，latest 是 compose 的运行引用
+                dir('web') {
+                    sh "docker build -t ${IMAGE_TAG} -t yuxm-web:latest ."
+                }
+                dir('api') {
+                    sh "docker build -t ${API_IMAGE_TAG} -t yuxm-api:latest ."
+                }
+            }
+        }
+
+        stage('部署') {
+            steps {
+                // 镜像已在上一阶段构建并打好 latest 标签，这里只做容器替换
+                // --no-build：保证部署的一定是刚构建/回滚时 retag 的镜像，不被意外重建
+                dir('deploy') {
+                    withEnv(['DOCKER_BUILDKIT=1']) {
+                        sh 'docker compose up -d --no-build web api'
+                    }
+                }
+            }
+        }
+
+        stage('健康检查') {
+            steps {
+                retry(5) {
+                    sleep 10
+                    sh '''
+                      curl -fsS http://127.0.0.1/api/health > /dev/null || (echo "API 健康检查失败" && exit 1)
+                      curl -fsS http://127.0.0.1/ > /dev/null || (echo "前端健康检查失败" && exit 1)
+                    '''
+                }
+            }
+        }
+
+        stage('记录回滚点') {
+            steps {
+                // 健康检查通过才算"部署成功"，此时：
+                //   .deployed_build  ← 本次 BUILD_NUMBER（当前线上版本）
+                //   .rollback_build  ← 上一次线上版本（供 rollback.sh 一键回退）
+                // 注意：健康检查失败时流水线在此前已失败，不会覆盖回滚点
+                sh '''
+                  STATE_DIR="${ROLLBACK_STATE_DIR}"
+                  mkdir -p "${STATE_DIR}"
+                  if [ -f "${STATE_DIR}/.deployed_build" ]; then
+                    cp "${STATE_DIR}/.deployed_build" "${STATE_DIR}/.rollback_build"
+                  fi
+                  echo "${BUILD_NUMBER}" > "${STATE_DIR}/.deployed_build"
+                  echo "回滚点已记录：当前 #${BUILD_NUMBER}，可回退至 $(cat "${STATE_DIR}/.rollback_build" 2>/dev/null || echo '无')"
+                '''
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo '部署失败：可用 `cd deploy && docker compose logs api web` 排查'
+            echo '如需立即恢复线上版本：bash deploy/scripts/rollback.sh'
+        }
+        success {
+            echo "部署成功：BUILD #${BUILD_NUMBER}"
+        }
+        always {
+            sh 'docker image prune -f --filter "label=stage=yuxm-intermediate" 2>/dev/null || true'
+        }
+    }
+}

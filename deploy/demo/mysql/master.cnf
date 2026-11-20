@@ -1,0 +1,7 @@
+﻿# MySQL 主库配置（演示主从复制）
+[mysqld]
+server-id = 1
+log-bin = mysql-bin
+binlog_format = ROW
+binlog_expire_logs_seconds = 604800
+character-set-server = utf8mb4

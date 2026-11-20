@@ -1,0 +1,41 @@
+# Node / Nuxt
+node_modules/
+.nuxt/
+.output/
+dist/
+.nitro/
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Deploy secrets (certs / prod env)
+deploy/nginx/certs/
+deploy/*.env
+
+# 部署状态文件（Jenkins 记录回滚点，属宿主机运行时数据）
+.deployed_build
+.rollback_build
