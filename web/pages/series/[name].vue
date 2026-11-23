@@ -24,7 +24,7 @@ const articles = computed<ArticleMeta[]>(() =>
 )
 
 useSeoMeta({
-  title: () => `${series.value?.title}系列 | 余先森的技术站`,
+  title: () => `${series.value?.title}系列 | 虞先森的技术站`,
   description: () => series.value?.description || ''
 })
 </script>

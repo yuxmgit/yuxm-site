@@ -67,7 +67,7 @@ const toc = computed(() => {
 })
 
 useSeoMeta({
-  title: () => `${article.value?.title} | 余先森的技术站`,
+  title: () => `${article.value?.title} | 虞先森的技术站`,
   description: () => article.value?.description || ''
 })
 </script>

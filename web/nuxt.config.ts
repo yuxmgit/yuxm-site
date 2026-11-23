@@ -36,7 +36,7 @@ export default defineNuxtConfig({
     public: {
       // FastAPI 后端地址
       apiBase: 'http://localhost:8000',
-      siteName: '余先森的技术站',
+      siteName: '虞先森的技术站',
       githubUrl: 'https://github.com/yuxiangming',
       giteeUrl: 'https://gitee.com/yuxiangming'
     }

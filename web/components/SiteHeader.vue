@@ -36,7 +36,7 @@ const doLogoutAll = async () => {
     <nav class="mx-auto flex h-full max-w-6xl items-center justify-between px-4">
       <NuxtLink to="/" class="flex items-center gap-2">
         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-brand font-mono text-sm font-bold text-white">Y</span>
-        <span class="text-lg font-semibold">余先森的技术站</span>
+        <span class="text-lg font-semibold">虞先森的技术站</span>
       </NuxtLink>
 
       <!-- 桌面端导航 -->

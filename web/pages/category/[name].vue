@@ -29,7 +29,7 @@ const seriesInCategory = computed(() => {
 })
 
 useSeoMeta({
-  title: () => `${category.value?.name}教程 | 余先森的技术站`,
+  title: () => `${category.value?.name}教程 | 虞先森的技术站`,
   description: () => category.value?.description || ''
 })
 </script>

@@ -20,7 +20,7 @@ const projects = [
 ]
 
 useSeoMeta({
-  title: '关于我 | 余先森的技术站',
+  title: '关于我 | 虞先森的技术站',
   description: '开发者 yuxiangming：Python 后端 / 全栈，专注 Redis、MySQL、Jenkins、Docker、JWT、OAuth2 的工程化实践。'
 })
 </script>
@@ -31,7 +31,7 @@ useSeoMeta({
     <section class="mb-10">
       <h1 class="mb-4 text-3xl font-bold">关于我</h1>
       <p class="mb-3 leading-relaxed text-slate-600 dark:text-slate-300">
-        你好，我是余先森（yuxiangming），一名后端方向的开发者。这个网站是我求职展示的一部分：
+        你好，我是虞先森（yuxiangming），一名后端方向的开发者。这个网站是我求职展示的一部分：
         它不只是教程，教程里讲的每一项技术（JWT 踢下线、OAuth2 登录、Docker 编排、Jenkins 流水线）
         都被网站本身真实使用着——你可以把本站当作一份"可运行的简历"。
       </p>

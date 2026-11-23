@@ -31,7 +31,7 @@ const highlights = [
 ]
 
 useSeoMeta({
-  title: '余先森的技术站 | Redis 集群 · MySQL · Jenkins · Docker · JWT · OAuth2',
+  title: '虞先森的技术站 | Redis 集群 · MySQL · Jenkins · Docker · JWT · OAuth2',
   description: '开发者求职向技术教程站：Redis 集群、MySQL 主从、Jenkins 流水线、Docker、JWT、OAuth2、Python 框架实战。本站自身架构即教程的最佳示例。'
 })
 </script>

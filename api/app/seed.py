@@ -14,7 +14,7 @@ from app.core.security import hash_password
 from app.models.user import SiteSetting, User
 
 DEFAULT_SETTINGS = {
-    "site_name": "余先森的技术站",
+    "site_name": "虞先森的技术站",
     "seo_description": "开发者求职向技术教程站：Redis 集群、MySQL 主从、Jenkins、Docker、JWT、OAuth2、Python 框架实战。",
     "hero_intro": "写教程，也在跑教程。本站自身架构即教程的最佳示例：Nuxt3 + FastAPI + Redis 黑名单踢下线 + Docker + Jenkins。",
     "announcement": "",
