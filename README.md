@@ -82,3 +82,4 @@ git remote add origin https://github.com/yuxmgit/yuxm-site.git
 git push -u origin main
 # 供 Jenkins 拉取；如需 Gitee 双平台可另行添加第二个 remote
 ```
+
