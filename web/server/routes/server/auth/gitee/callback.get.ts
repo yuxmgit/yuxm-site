@@ -1,4 +1,5 @@
-// Gitee OAuth 回调中转（与 github.get.ts 流程一致）
+// Gitee OAuth 回调中转（与 github/callback.get.ts 流程一致）
+// 路由路径必须与 Gitee OAuth 应用的回调地址一致：/server/auth/gitee/callback
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const code = String(query.code || '')

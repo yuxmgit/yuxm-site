@@ -1,5 +1,7 @@
-// OAuth 回调中转（Nitro 服务端路由）：
+// GitHub OAuth 回调中转（Nitro 服务端路由）：
 // 第三方重定向到这里 → 服务端拿 code/state 调 FastAPI 换 token → 302 回首页并携带登录数据
+// 路由路径必须与 GitHub OAuth App 的 Authorization callback URL 一致：
+//   /server/auth/github/callback
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const code = String(query.code || '')

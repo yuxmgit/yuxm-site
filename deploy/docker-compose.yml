@@ -69,10 +69,16 @@ services:
   web:
     build:
       context: ../web
+      # 构建时的默认值，仅影响镜像内兜底；运行时由下方 environment 覆盖
       args:
         API_BASE: http://api:8000
     image: yuxm-web:latest
     restart: unless-stopped
+    environment:
+      # 浏览器端 API 基址必须是公网可达地址（容器内地址 http://api:8000 浏览器
+      # 无法解析，会导致所有客户端请求失败）。服务端 SSR 请求打公网地址经
+      # nginx 回环到 api，同样可用。换域名/IP 时同步修改。
+      NUXT_PUBLIC_API_BASE: http://49.234.202.181
     expose:
       - "3000"
     depends_on:
