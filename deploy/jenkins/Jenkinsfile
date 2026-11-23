@@ -70,11 +70,13 @@ pipeline {
 
         stage('健康检查') {
             steps {
+                // 本 stage 在 Jenkins 容器内执行，其 127.0.0.1 不是宿主机网络，
+                // 因此通过 docker exec 进入 nginx 容器（与 nginx 同网络命名空间）做检查
                 retry(5) {
                     sleep 10
                     sh '''
-                      curl -fsS http://127.0.0.1/api/health > /dev/null || (echo "API 健康检查失败" && exit 1)
-                      curl -fsS http://127.0.0.1/ > /dev/null || (echo "前端健康检查失败" && exit 1)
+                      docker exec yuxm-site-nginx-1 wget -q -O /dev/null http://127.0.0.1/api/health || (echo "API 健康检查失败" && exit 1)
+                      docker exec yuxm-site-nginx-1 wget -q -O /dev/null http://127.0.0.1/ || (echo "前端健康检查失败" && exit 1)
                     '''
                 }
             }
