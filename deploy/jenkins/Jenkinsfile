@@ -1,4 +1,4 @@
-// yuxm-site 生产流水线：拉码 → 前端测试/构建 → 构建镜像 → 部署 → 健康检查
+// yuxm-site 生产流水线：拉码 → 后端语法检查 → 构建镜像（内含前端构建） → 部署 → 健康检查
 // Jenkins 需装插件：Pipeline、Docker Pipeline、Git
 // 凭据：repo-credentials（GitHub 拉码账号，仓库 https://github.com/yuxmgit/yuxm-site）与服务器本机 Docker 即可，无需额外云凭据
 pipeline {
@@ -29,16 +29,9 @@ pipeline {
             }
         }
 
-        stage('前端质量检查与构建') {
-            steps {
-                dir('web') {
-                    sh 'npm install --registry=https://registry.npmmirror.com'
-                    // 预留：npm run lint && npm run test（脚手架后续补充 lint/test 脚本）
-                    sh 'npm run build'
-                }
-            }
-        }
-
+        // 前端构建在「构建镜像」阶段由 web/Dockerfile 内完成（npm install + nuxt build），
+        // Jenkins 容器无需安装 Node；后续若补 lint/test 脚本，可用
+        // docker run --rm -v "$PWD/web":/app -w /app node:22-slim sh -c "npm i && npm run lint"
         stage('后端语法检查') {
             steps {
                 sh '''
