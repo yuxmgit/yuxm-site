@@ -104,7 +104,9 @@ services:
   # Jenkins CI/CD：挂在宿主机 docker.sock 上，流水线可直接执行 docker/compose 命令
   # 安全提醒：8080 端口请在腾讯云安全组中仅放行自己的 IP，不要对公网开放
   jenkins:
-    image: jenkins/jenkins:lts
+    # 自定义镜像：补装 docker CLI + compose 插件（官方镜像没有，流水线必需）
+    build: ./jenkins
+    image: yuxm-jenkins:latest
     restart: unless-stopped
     ports:
       - "8080:8080"    # Web 控制台
