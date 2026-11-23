@@ -1,37 +1,91 @@
-// yuxm-site 生产流水线：拉码 → 后端语法检查 → 构建镜像（内含前端构建） → 部署 → 健康检查
-// Jenkins 需装插件：Pipeline、Docker Pipeline、Git
-// 凭据：repo-credentials（GitHub 拉码账号，仓库 https://github.com/yuxmgit/yuxm-site）与服务器本机 Docker 即可，无需额外云凭据
+/* ============================================================================
+ * yuxm-site 生产部署流水线
+ * ----------------------------------------------------------------------------
+ * 整体流程：git push → Jenkins 5 分钟内轮询感知 → 本流水线自动执行：
+ *   检出代码 → 后端语法检查 → 构建镜像（内含前端构建） → 部署替换容器
+ *            → 健康检查 → 记录回滚点
+ *
+ * 环境前提（已配置）：
+ *   - Jenkins 跑在自定义镜像 yuxm-jenkins:latest（deploy/jenkins/Dockerfile）里，
+ *     内含 docker CLI + compose 插件；通过挂载宿主机 /var/run/docker.sock 直接
+ *     操作宿主机 Docker（DooD 模式），因此本文件里所有 docker 命令操作的都是
+ *     宿主机上的镜像与容器
+ *   - compose 挂载宿主机部署目录：- /opt/yuxm-site/deploy:/host-deploy
+ *     （流水线在 Jenkins 容器内执行 shell，靠它读取 .env、写回滚点状态文件）
+ *
+ * 需要的插件：Pipeline、Git（自定义 Item 类型与 checkout scm）
+ * 需要的凭据：repo-credentials（Username with password：GitHub 用户名 yuxmgit
+ *             + 私人令牌 PAT），供流水线拉取私有/受限仓库代码
+ *
+ * 回滚：任何一次部署失败，线上旧容器仍在运行（up -d 原子替换，新容器起不来
+ *       旧的还在）；确认要回退时在宿主机执行 bash deploy/scripts/rollback.sh
+ * ==========================================================================*/
 pipeline {
+
+    // agent any：在任一可用节点执行；本机单机部署固定跑在内置节点 "Jenkins" 上，
+    // 工作区位于容器内 /var/jenkins_home/workspace/yuxm-site（随 jenkins_data 卷持久化）
     agent any
 
     options {
+        // 日志每行带时间戳，方便定位慢在哪一步
         timestamps()
+        // 禁止并发构建：两次 push 同时触发时排队执行，防止两个构建同时
+        // 打 latest 标签 / 替换容器互相覆盖
         disableConcurrentBuilds()
+        // 只保留最近 20 次构建记录（含其日志与产物索引），控制磁盘占用
         buildDiscarder(logRotator(numToKeepStr: '20'))
+        // 整条流水线 30 分钟超时：正常 5~10 分钟，超时说明卡死（如镜像拉取挂起）
         timeout(time: 30, unit: 'MINUTES')
     }
 
     environment {
-        // Jenkins 工作区内项目根目录（Jenkinsfile 位于 deploy/jenkins/）
+        // WORKSPACE = 本次构建的检出目录（Jenkins 注入变量）
         PROJECT_DIR = "${WORKSPACE}"
+        // deploy/ 目录：compose 编排、nginx 配置、脚本都在这里
         COMPOSE_DIR = "${WORKSPACE}/deploy"
+        // 镜像双标签中的版本标签：yuxm-web:1、yuxm-web:2 ...（BUILD_NUMBER 从 1 递增）
+        // 每个构建号对应的镜像永久保留，是「回滚到任意历史版本」的基础
         IMAGE_TAG = "yuxm-web:${BUILD_NUMBER}"
         API_IMAGE_TAG = "yuxm-api:${BUILD_NUMBER}"
-        // 回滚点状态文件所在目录（Jenkins 容器内挂载的宿主机部署目录；compose 里
-        // - /opt/yuxm-site/deploy:/host-deploy，路径不同请同步改 compose 与 rollback.sh）
+        // 回滚点状态文件的读写目录 = Jenkins 容器内视角的宿主机部署目录
+        // （对应 compose 中 - /opt/yuxm-site/deploy:/host-deploy 挂载；
+        //  路径有调整时需同步修改 compose 与 rollback.sh）
+        // 注意：宿主机上 rollback.sh 用的是 /opt/yuxm-site/deploy，两者指向同一批文件
         ROLLBACK_STATE_DIR = "/host-deploy"
     }
 
     stages {
+
+        /* ------------------------------------------------------------------
+         * 阶段 1：检出代码
+         * checkout scm = 拉取任务配置里指定的 SCM 仓库与分支（*/main）。
+         * 第二次起会增量 fetch，只拉新提交，速度很快。
+         * 检出的代码同时包含：web/（前端源码）、api/（后端源码）、deploy/（编排），
+         * 后续所有阶段都在这个工作区内操作。
+         * ------------------------------------------------------------------ */
         stage('检出代码') {
             steps {
                 checkout scm
             }
         }
 
-        // 前端构建在「构建镜像」阶段由 web/Dockerfile 内完成（npm install + nuxt build），
-        // Jenkins 容器无需安装 Node；后续若补 lint/test 脚本，可用
-        // docker run --rm -v "$PWD/web":/app -w /app node:22-slim sh -c "npm i && npm run lint"
+        /* ------------------------------------------------------------------
+         * （前端构建说明）
+         * 前端不单独在 Jenkins 里 npm build——web/Dockerfile 内部已经完整执行
+         * npm install + nuxt build（多阶段构建），Jenkins 容器无需安装 Node。
+         * 好处：构建环境由 Dockerfile 锁定，Jenkins 侧零依赖。
+         * 后续若补 lint/test 脚本，可以在此插入：
+         *   docker run --rm -v "$PWD/web":/app -w /app node:22-slim \
+         *     sh -c "npm i && npm run lint"
+         * ------------------------------------------------------------------ */
+
+        /* ------------------------------------------------------------------
+         * 阶段 2：后端语法检查（快速失败）
+         * 用官方 python:3.12-slim 临时容器跑 compileall：把 api/ 下所有 .py
+         * 编译成字节码，任何语法错误在这里立刻失败，避免带着语法错误走完
+         * 慢得多的镜像构建。-q 只输出出错文件；容器用完即删（--rm）。
+         * 成本约 1~2 秒（python 镜像首次拉取后走缓存）。
+         * ------------------------------------------------------------------ */
         stage('后端语法检查') {
             steps {
                 sh '''
@@ -41,9 +95,20 @@ pipeline {
             }
         }
 
+        /* ------------------------------------------------------------------
+         * 阶段 3：构建镜像（整个流水线最耗时的一步，约 3~5 分钟）
+         * web：web/Dockerfile 多阶段构建——builder 阶段 npm install + nuxt
+         *      build 产出 .output，运行阶段只拷贝产物（依赖源：npmmirror +
+         *      better-sqlite3 预编译二进制镜像，无需本机编译工具链）
+         * api：api/Dockerfile——pip 装 requirements（腾讯 PyPI 源）+ 拷贝 app/
+         * 依赖不变时 Docker 层缓存直接命中，只重建变化的部分。
+         * ------------------------------------------------------------------ */
         stage('构建镜像') {
             steps {
-                // 双标签：BUILD_NUMBER 用于版本化回滚，latest 是 compose 的运行引用
+                // 双标签策略：
+                //   yuxm-web:<BUILD_NUMBER> —— 版本标签，永不移动，供回滚定位
+                //   yuxm-web:latest        —— 移动标签，compose 的运行引用
+                // 构建成功后 latest 即指向本次版本；回滚 = 把历史版本重新打 latest
                 dir('web') {
                     sh "docker build -t ${IMAGE_TAG} -t yuxm-web:latest ."
                 }
@@ -53,13 +118,30 @@ pipeline {
             }
         }
 
+        /* ------------------------------------------------------------------
+         * 阶段 4：部署（替换线上 web/api 容器）
+         * 第 1 步：检查宿主机部署目录里有 .env（JWT 密钥、数据库密码等）。
+         *         .env 含密钥、被 gitignore，仓库工作区里没有——它只存在
+         *         于宿主机 /opt/yuxm-site/deploy/.env（首次手动部署时生成），
+         *         通过 /host-deploy 挂载点在这里可读。
+         * 第 2 步：复制 .env 到工作区 deploy/ 目录——compose 既用它做变量
+         *         插值（MYSQL_ROOT_PASSWORD 等），又作为 api 服务的 env_file。
+         * 第 3 步：docker compose up -d --no-build web api
+         *         - 项目名固定为 yuxm-site（compose 文件顶部 name 字段），
+         *           所以无论从哪个目录执行，接管的是同一批线上容器
+         *         - --no-build：只允许使用已存在的镜像，杜绝"部署时意外
+         *           重新构建出一个非本次构建号镜像"的歧义
+         *         - compose 对比配置差异，只重建镜像变化的容器（web/api），
+         *           mysql/redis/nginx 不受影响
+         * 注意：compose 文件引用的 nginx/ 配置用的是工作区里的副本（与仓库
+         *       一致），nginx 服务不在本流水线的部署列表里，若改了 nginx 配置
+         *       需在宿主机手动 docker compose restart nginx。
+         * ------------------------------------------------------------------ */
         stage('部署') {
             steps {
-                // .env 含密钥不入库（gitignore），从宿主机部署目录挂载点复制到工作区
+                // 前置校验：.env 缺失时立刻明确报错（而不是 compose 插值报一堆看不懂的错）
                 sh 'test -f ${ROLLBACK_STATE_DIR}/.env || (echo "缺少 /host-deploy/.env，请先完成首次手动部署" && exit 1)'
                 sh 'cp ${ROLLBACK_STATE_DIR}/.env ${COMPOSE_DIR}/.env'
-                // 镜像已在上一阶段构建并打好 latest 标签，这里只做容器替换
-                // --no-build：保证部署的一定是刚构建/回滚时 retag 的镜像，不被意外重建
                 dir('deploy') {
                     withEnv(['DOCKER_BUILDKIT=1']) {
                         sh 'docker compose up -d --no-build web api'
@@ -68,10 +150,18 @@ pipeline {
             }
         }
 
+        /* ------------------------------------------------------------------
+         * 阶段 5：健康检查（部署是否真正成功的判据）
+         * 为什么不在 Jenkins 容器里 curl 127.0.0.1？——那是 Jenkins 容器自己
+         * 的回环地址，宿主机 80 端口的 nginx 它看不见。
+         * 方案：docker exec 进入 nginx 容器执行检查。nginx 容器内的 127.0.0.1
+         * 就是 nginx 本身（它把 /api/health 反代给 api、/ 反代给 web），
+         * 两个检查分别覆盖「后端可用」与「前端 SSR 可用」。
+         * retry(5)：每 10 秒探一次，最多 5 次（共约 50 秒），容忍容器启动
+         * 与应用初始化的延迟。5 次都失败 → 流水线失败，旧容器仍在运行。
+         * ------------------------------------------------------------------ */
         stage('健康检查') {
             steps {
-                // 本 stage 在 Jenkins 容器内执行，其 127.0.0.1 不是宿主机网络，
-                // 因此通过 docker exec 进入 nginx 容器（与 nginx 同网络命名空间）做检查
                 retry(5) {
                     sleep 10
                     sh '''
@@ -82,12 +172,18 @@ pipeline {
             }
         }
 
+        /* ------------------------------------------------------------------
+         * 阶段 6：记录回滚点（只有健康检查通过才会执行到这里）
+         * 在宿主机部署目录维护两个状态文件，rollback.sh 依赖它们工作：
+         *   .deployed_build —— 当前线上版本号（本次 BUILD_NUMBER）
+         *   .rollback_build —— 上一条线上版本号（供"无参一键回滚"）
+         * 演进过程：第 N 次部署成功时，先把旧 .deployed_build（N-1）拷贝为
+         * .rollback_build，再写入新的 N。首次部署时没有旧文件，跳过拷贝。
+         * 关键设计：健康检查失败时流水线在阶段 5 就中止了，不会走到这里——
+         * 失败的部署永远不会污染回滚点。
+         * ------------------------------------------------------------------ */
         stage('记录回滚点') {
             steps {
-                // 健康检查通过才算"部署成功"，此时：
-                //   .deployed_build  ← 本次 BUILD_NUMBER（当前线上版本）
-                //   .rollback_build  ← 上一次线上版本（供 rollback.sh 一键回退）
-                // 注意：健康检查失败时流水线在此前已失败，不会覆盖回滚点
                 sh '''
                   STATE_DIR="${ROLLBACK_STATE_DIR}"
                   mkdir -p "${STATE_DIR}"
@@ -101,6 +197,14 @@ pipeline {
         }
     }
 
+    /* ------------------------------------------------------------------------
+     * post：流水线结束后的收尾，无论成功失败
+     * failure：给出排查路径。强调"旧版本容器仍在运行"——up -d 是原子替换，
+     *          新容器起不来旧的还在，线上不会中断，可从容排查或回滚
+     * success：明确输出本次构建号
+     * always ：清理悬空镜像（buildkit 中间层），防止磁盘被构建垃圾填满；
+     *          容器里没有 docker 时静默跳过（|| true）
+     * ---------------------------------------------------------------------- */
     post {
         failure {
             echo '部署失败：可用 `cd deploy && docker compose logs api web` 排查'
