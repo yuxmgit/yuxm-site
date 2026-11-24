@@ -66,6 +66,35 @@ class AdminLoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    """账号注册：用户名 3-32 位字母/数字/下划线，密码至少 8 位。"""
+
+    username: str = Field(pattern=r"^[A-Za-z0-9_]{3,32}$")
+    password: str = Field(min_length=8, max_length=64)
+    nickname: str = Field(default="", max_length=32)
+
+
+class AccountLoginRequest(BaseModel):
+    """普通用户密码登录（与管理员登录共用账号体系）。"""
+
+    username: str
+    password: str
+
+
+class ProfileUpdateRequest(BaseModel):
+    """个人资料更新：字段为 None 表示不修改；avatar 传空串表示清空。"""
+
+    nickname: str | None = Field(default=None, max_length=32)
+    avatar: str | None = Field(default=None, max_length=512)
+
+
+class PasswordChangeRequest(BaseModel):
+    """修改密码：已有密码时必须校验旧密码；SMS/OAuth 用户首次设置密码则免旧密码。"""
+
+    old_password: str | None = None
+    new_password: str = Field(min_length=8, max_length=64)
+
+
 class OAuthCallbackRequest(BaseModel):
     code: str
     state: str
@@ -80,7 +109,13 @@ def issue_token_pair(user: User) -> dict:
     return {
         "access_token": create_access_token(user.id, user.token_version),
         "refresh_token": create_refresh_token(user.id, user.token_version),
-        "user": {"id": user.id, "nickname": user.nickname, "avatar": user.avatar, "role": user.role},
+        "user": {
+            "id": user.id,
+            "nickname": user.nickname,
+            "avatar": user.avatar,
+            "role": user.role,
+            "has_password": bool(user.password_hash),
+        },
     }
 
 
@@ -202,6 +237,75 @@ async def admin_login(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "账号已被封禁")
 
     # 3. 登录成功：清空失败计数
+    await clear_login_failures(redis, body.username, ip)
+    await _ensure_ver(redis, user)
+    return {"code": 0, "message": "ok", "data": issue_token_pair(user)}
+
+
+# ---------------- 账号注册 / 密码登录（普通用户） ----------------
+
+
+@router.post("/register")
+async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)) -> dict:
+    """开放注册：创建 role=user 账号并直接签发 token（注册即登录）。
+
+    username 全局唯一（与管理员账号同一字段），password 仅存 bcrypt 哈希。
+    """
+    from sqlalchemy import select
+
+    result = await db.execute(select(User).where(User.username == body.username))
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "用户名已被占用")
+    user = User(
+        username=body.username,
+        password_hash=hash_password(body.password),
+        nickname=body.nickname or body.username,
+        role="user",
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    redis = get_redis()
+    await _ensure_ver(redis, user)
+    return {"code": 0, "message": "注册成功", "data": issue_token_pair(user)}
+
+
+@router.post("/login")
+async def account_login(
+    body: AccountLoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """普通用户密码登录：与管理员登录相同的风控（锁定 + 失败计数），不限角色。"""
+    from sqlalchemy import select
+
+    from app.core.login_guard import (
+        LoginLockError,
+        check_login_lock,
+        clear_login_failures,
+        record_login_failure,
+    )
+
+    redis = get_redis()
+    ip = request.client.host if request.client else "unknown"
+    try:
+        await check_login_lock(redis, body.username, ip)
+    except LoginLockError as exc:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(exc)) from exc
+
+    result = await db.execute(select(User).where(User.username == body.username))
+    user = result.scalar_one_or_none()
+    if (
+        user is None
+        or not user.password_hash
+        or not verify_password(body.password, user.password_hash)
+    ):
+        await record_login_failure(redis, body.username, ip)
+        # 统一错误信息，避免用户名枚举
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "用户名或密码错误")
+    if user.is_banned:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "账号已被封禁")
+
     await clear_login_failures(redis, body.username, ip)
     await _ensure_ver(redis, user)
     return {"code": 0, "message": "ok", "data": issue_token_pair(user)}
@@ -352,8 +456,44 @@ async def logout_all(
 
 @router.get("/me")
 async def me(user: User = Depends(get_current_user)) -> dict:
+    return {"code": 0, "message": "ok", "data": issue_token_pair(user)["user"]}
+
+
+# ---------------- 个人资料 / 修改密码 ----------------
+
+
+@router.put("/profile")
+async def update_profile(
+    body: ProfileUpdateRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """更新个人资料（昵称/头像 URL）。字段缺省不修改；avatar 传空串清空头像。"""
+    if body.nickname is not None:
+        nickname = body.nickname.strip()
+        if not nickname:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "昵称不能为空")
+        user.nickname = nickname
+    if body.avatar is not None:
+        user.avatar = body.avatar.strip()
+    await db.commit()
+    return {"code": 0, "message": "资料已更新", "data": issue_token_pair(user)["user"]}
+
+
+@router.post("/password")
+async def change_password(
+    body: PasswordChangeRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """修改密码：已有密码校验旧密码；SMS/OAuth 用户首次设置免旧密码。"""
+    if user.password_hash:
+        if not body.old_password or not verify_password(body.old_password, user.password_hash):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "旧密码错误")
+    user.password_hash = hash_password(body.new_password)
+    await db.commit()
     return {
         "code": 0,
-        "message": "ok",
-        "data": {"id": user.id, "nickname": user.nickname, "avatar": user.avatar, "role": user.role},
+        "message": "已设置密码" if body.old_password is None else "密码已修改",
+        "data": issue_token_pair(user)["user"],
     }

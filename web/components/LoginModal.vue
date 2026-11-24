@@ -6,7 +6,7 @@ const config = useRuntimeConfig()
 const { isOpen, close } = useLoginModal()
 const { setAuth } = useAuth()
 
-const tab = ref<'sms' | 'oauth'>('sms')
+const tab = ref<'sms' | 'password' | 'oauth'>('sms')
 const phone = ref('')
 const code = ref('')
 const sending = ref(false)
@@ -14,6 +14,12 @@ const loggingIn = ref(false)
 const countdown = ref(0)
 const errorMsg = ref('')
 const devCode = ref('') // 开发环境未配置 SMS 时后端返回的验证码提示
+
+// 密码登录 / 注册
+const accountMode = ref<'login' | 'register'>('login')
+const username = ref('')
+const password = ref('')
+const nickname = ref('')
 
 let timer: ReturnType<typeof setInterval> | null = null
 
@@ -83,6 +89,33 @@ const smsLogin = async () => {
   }
 }
 
+const accountSubmit = async () => {
+  errorMsg.value = ''
+  if (!username.value || password.value.length < 8) {
+    errorMsg.value = '用户名不能为空，密码至少 8 位'
+    return
+  }
+  loggingIn.value = true
+  try {
+    const url = accountMode.value === 'login' ? '/api/auth/login' : '/api/auth/register'
+    const body =
+      accountMode.value === 'login'
+        ? { username: username.value, password: password.value }
+        : { username: username.value, password: password.value, nickname: nickname.value }
+    const res = await $fetch<{
+      code: number
+      data: { access_token: string; refresh_token: string; user: never }
+    }>(url, { baseURL: config.public.apiBase, method: 'POST', body })
+    setAuth(res.data)
+    close()
+  } catch (err: unknown) {
+    const e = err as { data?: { message?: string } }
+    errorMsg.value = e?.data?.message || (accountMode.value === 'login' ? '登录失败' : '注册失败')
+  } finally {
+    loggingIn.value = false
+  }
+}
+
 const oauthLogin = async (provider: 'github' | 'gitee') => {
   errorMsg.value = ''
   try {
@@ -117,17 +150,22 @@ const oauthLogin = async (provider: 'github' | 'gitee') => {
           </button>
         </div>
 
-        <div class="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-700">
+        <div class="mb-5 grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-700">
           <button
-            class="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+            class="cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium transition-colors"
             :class="tab === 'sms' ? 'bg-white shadow dark:bg-slate-800' : 'text-slate-500'"
             @click="tab = 'sms'"
-          >手机验证码</button>
+          >验证码</button>
           <button
-            class="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+            class="cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium transition-colors"
+            :class="tab === 'password' ? 'bg-white shadow dark:bg-slate-800' : 'text-slate-500'"
+            @click="tab = 'password'"
+          >账号密码</button>
+          <button
+            class="cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium transition-colors"
             :class="tab === 'oauth' ? 'bg-white shadow dark:bg-slate-800' : 'text-slate-500'"
             @click="tab = 'oauth'"
-          >第三方登录</button>
+          >第三方</button>
         </div>
 
         <div v-if="tab === 'sms'" class="space-y-3">
@@ -163,6 +201,50 @@ const oauthLogin = async (provider: 'github' | 'gitee') => {
             :disabled="loggingIn"
             @click="smsLogin"
           >{{ loggingIn ? '登录中…' : '登录' }}</button>
+        </div>
+
+        <!-- 账号密码登录 / 注册 -->
+        <div v-else-if="tab === 'password'" class="space-y-3">
+          <div class="grid grid-cols-2 gap-2 text-center text-xs">
+            <button
+              class="cursor-pointer rounded-lg py-1.5 font-medium transition-colors"
+              :class="accountMode === 'login' ? 'bg-primary-brand text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'"
+              @click="accountMode = 'login'"
+            >登录</button>
+            <button
+              class="cursor-pointer rounded-lg py-1.5 font-medium transition-colors"
+              :class="accountMode === 'register' ? 'bg-primary-brand text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'"
+              @click="accountMode = 'register'"
+            >注册新账号</button>
+          </div>
+          <input
+            v-model="username"
+            type="text"
+            maxlength="32"
+            placeholder="用户名（3-32 位字母/数字/下划线）"
+            class="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary-brand dark:border-slate-600"
+          />
+          <input
+            v-model="password"
+            type="password"
+            maxlength="64"
+            placeholder="密码（至少 8 位）"
+            class="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary-brand dark:border-slate-600"
+            @keyup.enter="accountSubmit"
+          />
+          <input
+            v-if="accountMode === 'register'"
+            v-model="nickname"
+            type="text"
+            maxlength="32"
+            placeholder="昵称（选填，默认同用户名）"
+            class="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary-brand dark:border-slate-600"
+          />
+          <button
+            class="w-full cursor-pointer rounded-lg bg-primary-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="loggingIn"
+            @click="accountSubmit"
+          >{{ loggingIn ? '提交中…' : accountMode === 'login' ? '登录' : '注册并登录' }}</button>
         </div>
 
         <div v-else class="space-y-3">

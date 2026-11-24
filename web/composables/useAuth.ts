@@ -4,6 +4,8 @@ export interface UserInfo {
   nickname: string
   avatar: string
   role: string
+  /** 是否设置了密码（SMS/OAuth 用户首次为 false，设置后为 true） */
+  has_password?: boolean
 }
 
 const STORAGE_KEY = 'yuxm-auth'
@@ -58,6 +60,14 @@ export const useAuth = () => {
     refreshToken.value = ''
     user.value = null
     persist()
+  }
+
+  /** 更新本地用户信息（修改资料/密码后同步 UI 与 localStorage） */
+  const updateUser = (partial: Partial<UserInfo>) => {
+    if (user.value) {
+      user.value = { ...user.value, ...partial }
+      persist()
+    }
   }
 
   /** 用 refresh token 换新 token 对；失败则清登录态 */
@@ -129,6 +139,7 @@ export const useAuth = () => {
     restore,
     setAuth,
     clearAuth,
+    updateUser,
     tryRefresh,
     authFetch,
     logout,

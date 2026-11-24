@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 顶部导航：Logo、分类下拉、搜索入口、暗色切换、登录按钮/用户菜单（固定定位）
-import { ChevronDown, LogOut, LogOut as LogOutAll, Moon, Search, Settings, Sun, User } from 'lucide-vue-next'
+import { ChevronDown, LogOut, LogOut as LogOutAll, Moon, Search, Settings, Sun, User, UserCircle } from 'lucide-vue-next'
 
 const { isDark, toggle } = useDarkMode()
 const { open } = useLoginModal()
@@ -108,6 +108,12 @@ const doLogoutAll = async () => {
               v-if="userMenuOpen"
               class="absolute right-0 top-full mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800"
             >
+              <button
+                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                @click="router.push('/profile')"
+              >
+                <UserCircle class="h-4 w-4" />个人中心
+              </button>
               <button
                 v-if="isAdmin"
                 class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700"

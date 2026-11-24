@@ -120,6 +120,9 @@ useSeoMeta({
           <span class="mt-1 block text-sm font-medium group-hover:text-primary-brand">{{ nextArticle.title }}</span>
         </NuxtLink>
       </div>
+
+      <!-- 互动区：点赞 / 收藏 / 笔记 / 评论 -->
+      <PostInteractive :slug="contentPath" />
     </article>
 
     <!-- 右侧目录 -->
