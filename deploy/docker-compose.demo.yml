@@ -11,37 +11,35 @@ name: yuxm-demo
 x-redis-conf: &redis-conf
   image: redis:7
   restart: unless-stopped
-  # 按节点端口动态生成配置：announce 到 127.0.0.1，保证宿主机 redis-cli 可直连集群
+  # 关键：host 网络模式。cluster-announce-ip 127.0.0.1 只有在 host 网络下才成立——
+  # 若节点跑在独立容器网络里，节点间用 127.0.0.1 互相寻址会连到各自容器自身，
+  # 集群握手失败（表现为 cluster_known_nodes:1 / CLUSTERDOWN）。
+  # 同时 bind 127.0.0.1 只监听回环，不暴露公网。
+  network_mode: host
   command:
     - sh
     - -c
     - |
-      printf 'port %s\ncluster-enabled yes\ncluster-config-file nodes.conf\ncluster-node-timeout 5000\nappendonly yes\ncluster-announce-ip 127.0.0.1\ncluster-announce-port %s\ncluster-announce-bus-port %s\n' "$$REDIS_PORT" "$$REDIS_PORT" "$$((REDIS_PORT + 10000))" > /tmp/redis.conf && exec redis-server /tmp/redis.conf
+      printf 'port %s\nbind 127.0.0.1\ncluster-enabled yes\ncluster-config-file nodes.conf\ncluster-node-timeout 5000\nappendonly yes\ncluster-announce-ip 127.0.0.1\ncluster-announce-port %s\ncluster-announce-bus-port %s\n' "$$REDIS_PORT" "$$REDIS_PORT" "$$((REDIS_PORT + 10000))" > /tmp/redis.conf && exec redis-server /tmp/redis.conf
 
 services:
   redis-node1:
     <<: *redis-conf
-    ports: ["7001:7001"]
     environment: { REDIS_PORT: 7001 }
   redis-node2:
     <<: *redis-conf
-    ports: ["7002:7002"]
     environment: { REDIS_PORT: 7002 }
   redis-node3:
     <<: *redis-conf
-    ports: ["7003:7003"]
     environment: { REDIS_PORT: 7003 }
   redis-node4:
     <<: *redis-conf
-    ports: ["7004:7004"]
     environment: { REDIS_PORT: 7004 }
   redis-node5:
     <<: *redis-conf
-    ports: ["7005:7005"]
     environment: { REDIS_PORT: 7005 }
   redis-node6:
     <<: *redis-conf
-    ports: ["7006:7006"]
     environment: { REDIS_PORT: 7006 }
 
   # 一次性建集群：3 主（7001-7003）+ 3 从（7004-7006）
@@ -54,10 +52,7 @@ services:
     entrypoint: >
       sh -c "
         sleep 3 &&
-        echo yes | redis-cli --cluster create
-        127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003
-        127.0.0.1:7004 127.0.0.1:7005 127.0.0.1:7006
-        --cluster-replicas 1 &&
+        echo yes | redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 127.0.0.1:7006 --cluster-replicas 1 &&
         redis-cli -p 7001 cluster info | head -n 5
       "
 

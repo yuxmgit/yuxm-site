@@ -1,7 +1,10 @@
-﻿# MySQL 主库配置（演示主从复制）
+# MySQL 主库配置（演示主从复制）
 [mysqld]
 server-id = 1
 log-bin = mysql-bin
 binlog_format = ROW
+# 从库用 GTID 自动定位（SOURCE_AUTO_POSITION=1）必须开启：
+gtid_mode = ON
+enforce_gtid_consistency = ON
 binlog_expire_logs_seconds = 604800
 character-set-server = utf8mb4

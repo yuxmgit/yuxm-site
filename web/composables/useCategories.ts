@@ -33,7 +33,9 @@ export const SERIES: SeriesMeta[] = [
   { key: 'redis-cluster-in-action', category: 'redis-cluster', title: 'Redis 集群实战', description: '从单机到 Cluster 3主3从的完整落地' },
   { key: 'mysql-replication', category: 'mysql', title: 'MySQL 主从与读写分离', description: '复制原理、搭建与验证' },
   { key: 'jenkins-pipeline', category: 'jenkins', title: 'Jenkins 生产级流水线', description: '从语法到共享库与治理' },
-  { key: 'jwt-deep-dive', category: 'jwt', title: 'JWT 深入与踢下线', description: '本站正在使用的认证方案' }
+  { key: 'jwt-deep-dive', category: 'jwt', title: 'JWT 深入与踢下线', description: '本站正在使用的认证方案' },
+  { key: 'auth-state-lab', category: 'jwt', title: '登录状态与踢下线·0基础', description: '用大白话讲清状态存储、JWT 踢人机制' },
+  { key: 'redis-reliability-lab', category: 'redis-cluster', title: 'Redis 可靠性与集群实录', description: '数据可靠性阶梯 + 3主3从故障转移实录' }
 ]
 
 export function getSeries(key: string): SeriesMeta | undefined {
