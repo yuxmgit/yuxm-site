@@ -1,6 +1,6 @@
 # yuxm-site
 
-面向开发者求职展示的个人技术教程网站，域名 `yuxm.site`（部署于腾讯云）。
+个人技术教程网站，域名 `yuxm.site`（部署于腾讯云）。
 代码仓库：[https://github.com/yuxmgit/yuxm-site](https://github.com/yuxmgit/yuxm-site)
 网站本身的技术栈（Nuxt3 + FastAPI + Docker + Jenkins + JWT/OAuth2 + Redis 黑名单踢下线）就是架构实践作品的一部分，教程内容与实现代码互相印证。
 
@@ -60,7 +60,7 @@ uvicorn app.main:app --reload --port 8000    # http://localhost:8000/api/docs
 3. 生产编排：`deploy/docker-compose.yml`（nginx / web / api / mysql / redis）
 4. HTTPS：腾讯云免费证书，配置模板见 `deploy/nginx/nginx.conf`
 5. CI/CD：`deploy/jenkins/Jenkinsfile`；教程演示集群（Redis Cluster 3主3从、MySQL 主从）单独用 `deploy/docker-compose.demo.yml`，与生产隔离
-6. 上线步骤与求职展示说明见 `docs/release.md`；**端到端总部署流程总纲见 `docs/deployment-overview.md`**
+6. 上线步骤与内容维护说明见 `docs/release.md`；**端到端总部署流程总纲见 `docs/deployment-overview.md`**
 
 ## 教程内容来源
 

@@ -31,9 +31,9 @@ useSeoMeta({
     <section class="mb-10">
       <h1 class="mb-4 text-3xl font-bold">关于我</h1>
       <p class="mb-3 leading-relaxed text-slate-600 dark:text-slate-300">
-        你好，我是虞先森（yuxiangming），一名后端方向的开发者。这个网站是我求职展示的一部分：
+        你好，我是虞先森（yuxiangming），一名后端方向的开发者。这个网站是我的技术实践记录：
         它不只是教程，教程里讲的每一项技术（JWT 踢下线、OAuth2 登录、Docker 编排、Jenkins 流水线）
-        都被网站本身真实使用着——你可以把本站当作一份"可运行的简历"。
+        都被网站本身真实使用着——教程内容与实现代码互相印证。
       </p>
       <p class="leading-relaxed text-slate-600 dark:text-slate-300">
         教程内容来自我持续维护的三个开源项目，覆盖集群、CI/CD 与认证体系，均配有可运行的代码示例。

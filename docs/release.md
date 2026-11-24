@@ -53,16 +53,16 @@ Jenkins 与业务服务同机部署，已加入 `deploy/docker-compose.yml`（`j
 
 Client ID/Secret 填入 `.env` 对应项后 `docker compose up -d api` 重启。
 
-## 求职展示说明（内容维护）
+## 内容维护与演示说明
 
 - 每篇教程 frontmatter 的 `sourceRepo` 指向源仓库；"本站实际使用的方案"徽标出现在所有文章详情页
-- 面试可现场演示的闭环：
+- 可现场演示的闭环：
   1. **JWT 踢下线**：登录 → 后台"用户管理"踢下线 → 前台立即 401 退出
   2. **OAuth2**：点击 GitHub 登录走完整授权码流程
   3. **限流防刷**：连续点"获取验证码"触发 60s 间隔 / 429
   4. **CI/CD**：git push → Jenkins 自动构建部署 → 健康检查
   5. **演示集群**：`docker compose -f docker-compose.demo.yml --profile init up redis-cluster-init` 起 Redis Cluster 3主3从，MySQL 主从自动复制
-- 整站开源，仓库 README 即简历附件
+- 整站开源，仓库 README 与教程内容互相印证
 
 ## 回滚
 

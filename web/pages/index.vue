@@ -18,7 +18,7 @@ const latestArticles = computed<ArticleMeta[]>(() =>
   (latestDocs.value || []).map(doc => toArticleMeta(doc as never)).filter((a): a is ArticleMeta => a !== null)
 )
 
-// 架构亮点：网站自身的实践，即求职展示
+// 架构亮点：网站自身的实践
 const highlights = [
   { icon: Server, title: 'FastAPI 后端', desc: '本站 API 即 FastAPI 实现，异步 SQLAlchemy + Pydantic' },
   { icon: Database, title: 'MySQL + Redis', desc: '双 token 校验走 Redis O(1) 读，无查询热点' },
@@ -26,13 +26,13 @@ const highlights = [
   { icon: ShieldCheck, title: 'OAuth2 登录', desc: 'GitHub / Gitee 授权码模式接入' },
   { icon: Container, title: 'Docker Compose', desc: 'nginx/web/api/mysql/redis 五容器编排' },
   { icon: Workflow, title: 'Jenkins CI/CD', desc: '流水线构建镜像并部署，健康检查' },
-  { icon: GitBranch, title: '整站开源', desc: '代码与教程同仓库，面试可现场演示' },
+  { icon: GitBranch, title: '整站开源', desc: '代码与教程同仓库，实践可直接查看' },
   { icon: Book, title: 'SSG 静态化', desc: 'Nuxt Content 构建期索引，SEO 友好' }
 ]
 
 useSeoMeta({
   title: '虞先森的技术站 | Redis 集群 · MySQL · Jenkins · Docker · JWT · OAuth2',
-  description: '开发者求职向技术教程站：Redis 集群、MySQL 主从、Jenkins 流水线、Docker、JWT、OAuth2、Python 框架实战。本站自身架构即教程的最佳示例。'
+  description: '技术教程站：Redis 集群、MySQL 主从、Jenkins 流水线、Docker、JWT、OAuth2、Python 框架实战。本站自身架构即教程的最佳示例。'
 })
 </script>
 
