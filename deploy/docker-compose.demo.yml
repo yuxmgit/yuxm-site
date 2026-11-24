@@ -5,7 +5,8 @@
 #   启动集群节点：    docker compose -f docker-compose.demo.yml up -d
 #   初始化 Redis 集群（仅首次）：docker compose -f docker-compose.demo.yml --profile init up redis-cluster-init
 #   启动 MySQL 主从： docker compose -f docker-compose.demo.yml --profile mysql up -d
-#   查看复制状态：    docker exec mysql-replica mysql -uroot -proot -e "SHOW REPLICA STATUS\G"
+#   查看复制状态：    docker exec yuxm-demo-mysql-replica-1 mysql -uroot -proot -e "SHOW REPLICA STATUS\G"
+#   （compose v2 容器名带项目前缀：yuxm-demo-<服务名>-1）
 name: yuxm-demo
 
 x-redis-conf: &redis-conf
