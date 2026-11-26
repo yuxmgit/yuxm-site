@@ -68,6 +68,8 @@ def create_app() -> FastAPI:
     from app.api.admin import router as admin_router
     from app.api.auth import router as auth_router
     from app.api.interactive import router as interactive_router
+    from app.api.posts import admin_router as posts_admin_router
+    from app.api.posts import public_router as posts_public_router
     from app.api.site import router as site_router
     from app.api.stats import router as stats_router
 
@@ -76,6 +78,8 @@ def create_app() -> FastAPI:
     app.include_router(site_router, prefix=API_PREFIX)
     app.include_router(interactive_router, prefix=API_PREFIX)
     app.include_router(admin_router, prefix=API_PREFIX)
+    app.include_router(posts_public_router, prefix=API_PREFIX)
+    app.include_router(posts_admin_router, prefix=API_PREFIX)
 
     return app
 

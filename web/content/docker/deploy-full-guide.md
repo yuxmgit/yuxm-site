@@ -15,8 +15,17 @@ sourceRepo: https://github.com/yuxiangming/yuxm-site
 
 ```
 生产线（一直跑）：  nginx -> web -> api -> mysql + redis + jenkins
+                    ★ 全部是单节点容器，生产环境没有任何集群！
 演示线（按需起）：  Redis Cluster 3主3从（7001-7006）+ MySQL 主从（3307/3308）
 ```
+
+**先说清一个最容易误解的点**：本站在生产环境跑的是 6 个**单节点**容器（`docker compose ps` 里 yuxm-site 项目的 mysql/redis 都只有一个实例）。所谓「3主3从」「主从复制」**只存在于演示线**——那是给教程读者练手的教学环境，与生产零关系。为什么生产不上集群？三个理由：
+
+1. **流量不需要**：个人站点日 PV 在千级，单节点 MySQL/Redis 绰绰有余，集群带来的复杂度远大于收益
+2. **内存不允许**：3.7G 的机器，生产栈已占约 1.5G；MySQL 主从双实例 +800M、Redis 集群 +300M，全常驻会把机器推向极限
+3. **架构已预留升级路径**：api 无状态（JWT+Redis），真到需要时，加副本只需 `docker compose up -d --scale api=3` + nginx upstream 加权重；数据层升级顺序：MySQL 主从 -> Redis 哨兵/集群
+
+所以正确的理解是：**演示线负责「学会怎么搭集群」，生产线负责「用最简单可靠的方式把站跑起来」**——什么时候该把生产升级成集群，看流量和可用性需求，而不是为了集群而集群。
 
 - **生产线**解决"网站怎么跑起来"：6 个容器组成全栈，配置在 `deploy/docker-compose.yml`
 - **演示线**解决"集群怎么搭、怎么验"：与生产完全隔离，用完可随时销毁，配置在 `deploy/docker-compose.demo.yml`（用 `profiles` 分组，不影响生产）

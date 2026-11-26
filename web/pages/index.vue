@@ -1,11 +1,11 @@
 <script setup lang="ts">
 // 首页：Hero（个人简介+架构亮点+开源入口）→ 精选分类 → 最新文章
 import { Book, Container, Database, GitBranch, KeyRound, Server, ShieldCheck, Workflow } from 'lucide-vue-next'
-import type { ArticleMeta } from '~/composables/useArticleMeta'
+import type { ArticleMeta, DbArticleRow } from '~/composables/useArticleMeta'
 
 const config = useRuntimeConfig()
 
-// 最新文章：从 content 目录按日期倒序取 6 篇（后台覆盖信息后续由 API 合并）
+// 最新文章：content 目录静态文章 + 后台在线文章合并，日期倒序取 6 篇
 const { data: latestDocs } = await useAsyncData('latest-posts', () =>
   queryCollection('content')
     .select('title', 'description', 'category', 'series', 'seriesOrder', 'tags', 'date', 'path')
@@ -14,9 +14,27 @@ const { data: latestDocs } = await useAsyncData('latest-posts', () =>
     .all()
 )
 
-const latestArticles = computed<ArticleMeta[]>(() =>
-  (latestDocs.value || []).map(doc => toArticleMeta(doc as never)).filter((a): a is ArticleMeta => a !== null)
-)
+// 后台在线文章（已发布），失败静默为空
+const { data: dbLatest } = await useAsyncData('latest-posts-db', async () => {
+  try {
+    const res = await $fetch<{ code: number; data: { items: DbArticleRow[] } }>('/api/posts', {
+      baseURL: config.public.apiBase,
+      query: { size: 6 }
+    })
+    return (res.data?.items || []).map(toDbArticleMeta)
+  } catch {
+    return []
+  }
+})
+
+const latestArticles = computed<ArticleMeta[]>(() => {
+  const staticList = (latestDocs.value || []).map(doc => toArticleMeta(doc as never)).filter((a): a is ArticleMeta => a !== null)
+  const dbList = dbLatest.value || []
+  const seen = new Set(dbList.map(a => a.slug))
+  return [...dbList, ...staticList.filter(a => !seen.has(a.slug))]
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .slice(0, 6)
+})
 
 // 架构亮点：网站自身的实践
 const highlights = [

@@ -10,15 +10,61 @@ const contentPath = computed(() =>
   (route.params.slug as string[]).join('/')
 )
 
+// ① 优先查在线文章库（后台新建/编辑的文章），查不到回退 content/ 静态 Markdown
+interface DbArticleData {
+  id: number
+  slug: string
+  title: string
+  description: string
+  category: string
+  tags: string[]
+  date: string | null
+  series: string
+  seriesOrder: number | null
+  sourceRepo: string
+  contentMd: string
+}
+
+const { data: dbResp } = await useAsyncData(`post-db-${contentPath.value}`, async () => {
+  try {
+    const res = await $fetch<{ code: number; data: DbArticleData }>(`/api/posts/${contentPath.value}`, {
+      baseURL: config.public.apiBase
+    })
+    return res.code === 0 ? res.data : null
+  } catch {
+    return null // 404/网络错误都视为"无在线文章"，走静态回退
+  }
+})
+
+const dbArticle = computed(() => dbResp.value as DbArticleData | null)
+
 const { data: doc, error } = await useAsyncData(`post-${contentPath.value}`, () =>
   queryCollection('content').path(`/${contentPath.value}`).first()
 )
 
-if (error.value || !doc.value) {
+if (!dbArticle.value && (error.value || !doc.value)) {
   throw createError({ statusCode: 404, statusMessage: '文章不存在', fatal: true })
 }
 
-const article = computed(() => toArticleMeta(doc.value as never))
+const article = computed<ArticleMeta | null>(() => {
+  if (dbArticle.value) {
+    return {
+      title: dbArticle.value.title,
+      description: dbArticle.value.description,
+      category: dbArticle.value.category,
+      series: dbArticle.value.series || undefined,
+      seriesOrder: dbArticle.value.seriesOrder ?? undefined,
+      tags: dbArticle.value.tags,
+      date: (dbArticle.value.date || '').slice(0, 10),
+      sourceRepo: dbArticle.value.sourceRepo || undefined,
+      slug: dbArticle.value.slug
+    }
+  }
+  return toArticleMeta(doc.value as never)
+})
+
+// 在线文章：Markdown -> 安全 HTML（sanitize-html 白名单过滤）+ 目录提取
+const dbHtml = computed(() => (dbArticle.value ? renderMarkdown(dbArticle.value.contentMd) : ''))
 const category = computed(() => getCategory(article.value?.category || ''))
 const series = computed(() => article.value?.series ? getSeries(article.value.series) : undefined)
 
@@ -51,8 +97,9 @@ onMounted(async () => {
   }
 })
 
-// 目录锚点：v3 直接提供 body.toc.links（h2/h3，含嵌套 children）
+// 目录锚点：在线文章用 extractToc 从 Markdown 提取；静态文章用 body.toc.links
 const toc = computed(() => {
+  if (dbArticle.value) return extractToc(dbArticle.value.contentMd)
   interface TocLinkLike { id: string; text: string; depth: number; children?: TocLinkLike[] }
   const links = (doc.value as unknown as { body?: { toc?: { links?: TocLinkLike[] } } } | null)?.body?.toc?.links || []
   const items: Array<{ id: string; text: string; level: number }> = []
@@ -85,6 +132,11 @@ useSeoMeta({
         </nav>
         <div class="mb-3 flex items-center gap-2">
           <span
+            v-if="dbArticle"
+            class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"
+          >在线文章</span>
+          <span
+            v-else
             class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
             title="本站自身的技术实践"
           >本站实际使用的方案</span>
@@ -104,9 +156,11 @@ useSeoMeta({
         </div>
       </div>
 
-      <!-- 正文（@nuxt/content 渲染，Shiki 高亮） -->
+      <!-- 正文：在线文章用过滤后的 HTML，静态文章走 @nuxt/content（Shiki 高亮） -->
       <div class="prose-nuxt">
-        <ContentRenderer :value="doc" />
+        <ContentRenderer v-if="!dbArticle" :value="doc" />
+        <!-- 在线文章正文已经 sanitize-html 白名单过滤，无脚本注入风险 -->
+        <div v-else v-html="dbHtml" />
       </div>
 
       <!-- 上下篇 -->

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 分类页：左侧分类/系列侧栏 + 右侧文章卡片流
-import type { ArticleMeta } from '~/composables/useArticleMeta'
+import type { ArticleMeta, DbArticleRow } from '~/composables/useArticleMeta'
 
 const route = useRoute()
 const categoryKey = computed(() => route.params.name as string)
@@ -18,9 +18,44 @@ const { data: docs } = await useAsyncData(`category-${categoryKey.value}`, () =>
     .all()
 )
 
-const articles = computed<ArticleMeta[]>(() =>
-  (docs.value || []).map(d => toArticleMeta(d as never)).filter((a): a is ArticleMeta => a !== null)
-)
+// 该分类下的后台在线文章（已发布），失败静默为空
+const { data: dbDocs } = await useAsyncData(`category-db-${categoryKey.value}`, async () => {
+  const config = useRuntimeConfig()
+  try {
+    const res = await $fetch<{ code: number; data: { items: DbArticleRow[] } }>('/api/posts', {
+      baseURL: config.public.apiBase,
+      query: { category: categoryKey.value, size: 100 }
+    })
+    return (res.data?.items || []).map(toDbArticleMeta)
+  } catch {
+    return [] as ArticleMeta[]
+  }
+})
+
+const articles = computed<ArticleMeta[]>(() => {
+  const staticList = (docs.value || []).map(d => toArticleMeta(d as never)).filter((a): a is ArticleMeta => a !== null)
+  const dbList = dbDocs.value || []
+  const seen = new Set(dbList.map(a => a.slug))
+  const all = [...dbList, ...staticList.filter(a => !seen.has(a.slug))]
+  // 系列感知排序：同系列章节按 seriesOrder 连续成块，块与块之间按组内最新日期倒序；
+  // 无系列文章自成一个"块"，按自身日期参与排序。
+  const groups = new Map<string, ArticleMeta[]>()
+  for (const a of all) {
+    const key = a.series || `__solo__${a.slug}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(a)
+  }
+  const sortedGroups = [...groups.values()].sort((g1, g2) => {
+    const d1 = g1.map(x => x.date || '').sort().at(-1) || ''
+    const d2 = g2.map(x => x.date || '').sort().at(-1) || ''
+    return d2.localeCompare(d1)
+  })
+  return sortedGroups.flatMap(group =>
+    group[0]?.series
+      ? group.sort((x, y) => (x.seriesOrder ?? 999) - (y.seriesOrder ?? 999))
+      : group.sort((x, y) => (y.date || '').localeCompare(x.date || ''))
+  )
+})
 
 // 当前分类下的系列（去重）
 const seriesInCategory = computed(() => {
