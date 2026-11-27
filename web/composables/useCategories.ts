@@ -14,7 +14,8 @@ export const CATEGORIES: CategoryMeta[] = [
   { key: 'docker', name: 'Docker', description: '镜像与容器、Compose 编排、部署实践', icon: 'Container', color: '#06B6D4' },
   { key: 'jwt', name: 'JWT', description: '无状态登录、双 token、黑名单踢下线', icon: 'Key', color: '#10B981' },
   { key: 'oauth2', name: 'OAuth2', description: '授权码模式、GitHub/Gitee 登录、OIDC', icon: 'Shield', color: '#8B5CF6' },
-  { key: 'python-frameworks', name: 'Python 框架', description: 'FastAPI / Flask / Django 对比实战', icon: 'Code', color: '#0EA5E9' }
+  { key: 'python-frameworks', name: 'Python 框架', description: 'FastAPI / Flask / Django 对比实战', icon: 'Code', color: '#0EA5E9' },
+  { key: 'git', name: 'Git 实战', description: '常用命令、分支合并两种方式、分支分配模型、GitHub 练习仓库', icon: 'GitBranch', color: '#F05032' }
 ]
 
 export function getCategory(key: string): CategoryMeta | undefined {
@@ -36,7 +37,8 @@ export const SERIES: SeriesMeta[] = [
   { key: 'jwt-deep-dive', category: 'jwt', title: 'JWT 深入与踢下线', description: '本站正在使用的认证方案' },
   { key: 'auth-state-lab', category: 'jwt', title: '登录状态与踢下线·0基础', description: '用大白话讲清状态存储、JWT 踢人机制' },
   { key: 'redis-reliability-lab', category: 'redis-cluster', title: 'Redis 可靠性与集群实录', description: '数据可靠性阶梯 + 3主3从故障转移实录' },
-  { key: 'deploy-in-action', category: 'docker', title: '本站部署实录', description: '从裸机到全栈上线：每条命令带注释，含 Redis Cluster 与 MySQL 主从配置详解' }
+  { key: 'deploy-in-action', category: 'docker', title: '本站部署实录', description: '从裸机到全栈上线：每条命令带注释，含 Redis Cluster 与 MySQL 主从配置详解' },
+  { key: 'git-in-action', category: 'git', title: 'Git 命令实战入门', description: '常用命令、merge/rebase 两种合并、main/develop/release 分支分配、GitHub 练习仓库' }
 ]
 
 export function getSeries(key: string): SeriesMeta | undefined {
